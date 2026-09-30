@@ -3,13 +3,11 @@ name: Build RNAUTOMAP APK v4
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip'
-      - '.github/workflows/build-rnautomap-v4.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,23 +23,55 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Extract RNAUTOMAP v4 project
+      - name: Extract project
         shell: bash
         run: |
           set -e
-          ZIP="RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip"
-          test -f "$ZIP"
-          rm -rf RNAUTOMAP-Juken-Android
-          unzip -q "$ZIP"
-          test -f RNAUTOMAP-Juken-Android/settings.gradle
-          test -f RNAUTOMAP-Juken-Android/app/build.gradle
 
-      - name: Build debug APK
-        run: gradle -p RNAUTOMAP-Juken-Android assembleDebug --no-daemon
+          echo "Mencari file ZIP..."
+
+          ZIP=$(find . -maxdepth 2 -type f -name '*.zip' | head -n 1)
+
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: File ZIP tidak ditemukan."
+            exit 1
+          fi
+
+          echo "ZIP ditemukan: $ZIP"
+
+          rm -rf extracted
+          mkdir -p extracted
+
+          unzip -q "$ZIP" -d extracted
+
+          echo "Mencari settings.gradle..."
+
+          SETTINGS=$(find extracted -type f -name 'settings.gradle' | head -n 1)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: settings.gradle tidak ditemukan."
+            find extracted -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS")
+
+          echo "Project ditemukan: $PROJECT_DIR"
+
+          test -f "$PROJECT_DIR/app/build.gradle"
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+          echo "Building: $PROJECT_DIR"
+          gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RNAUTOMAP-debug-APK-v4
-          path: RNAUTOMAP-Juken-Android/app/build/outputs/apk/debug/*.apk
+          path: '**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
