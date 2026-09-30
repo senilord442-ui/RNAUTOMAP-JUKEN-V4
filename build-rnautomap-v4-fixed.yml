@@ -1,0 +1,47 @@
+name: Build RNAUTOMAP APK v4
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip'
+      - '.github/workflows/build-rnautomap-v4.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Extract RNAUTOMAP v4 project
+        shell: bash
+        run: |
+          set -e
+          ZIP="RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip"
+          test -f "$ZIP"
+          rm -rf RNAUTOMAP-Juken-Android
+          unzip -q "$ZIP"
+          test -f RNAUTOMAP-Juken-Android/settings.gradle
+          test -f RNAUTOMAP-Juken-Android/app/build.gradle
+
+      - name: Build debug APK
+        run: gradle -p RNAUTOMAP-Juken-Android assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RNAUTOMAP-debug-APK-v4
+          path: RNAUTOMAP-Juken-Android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
