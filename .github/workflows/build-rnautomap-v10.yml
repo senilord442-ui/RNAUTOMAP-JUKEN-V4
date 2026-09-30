@@ -1,0 +1,84 @@
+name: Build RNAUTOMAP V10
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cari ZIP V10
+        run: |
+          ZIP=$(find . -maxdepth 2 -type f -iname '*RNAUTOMAP-V10*.zip' | head -n 1)
+
+          if [ -z "$ZIP" ]; then
+            echo "ZIP RNAUTOMAP V10 tidak ditemukan."
+            echo "File yang tersedia:"
+            find . -maxdepth 3 -type f | head -100
+            exit 1
+          fi
+
+          echo "ZIP ditemukan: $ZIP"
+          echo "ZIP_PATH=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Extract project V10
+        run: |
+          mkdir -p v10_project
+          unzip -o "$ZIP_PATH" -d v10_project
+
+          echo "Isi project:"
+          find v10_project -maxdepth 3 -type f | head -100
+
+      - name: Cari Gradle project
+        run: |
+          GRADLEW=$(find v10_project -type f -name gradlew | head -n 1)
+
+          if [ -z "$GRADLEW" ]; then
+            echo "gradlew tidak ditemukan."
+            echo "Struktur ZIP:"
+            find v10_project -maxdepth 5 -type f
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          PROJECT_DIR=$(realpath "$PROJECT_DIR")
+
+          echo "Project Gradle: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK V10
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Cari APK
+        run: |
+          APK=$(find "$PROJECT_DIR" -type f -name '*.apk' | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "APK tidak ditemukan."
+            exit 1
+          fi
+
+          echo "APK ditemukan: $APK"
+          cp "$APK" "$GITHUB_WORKSPACE/RNAUTOMAP-V10-debug.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RNAUTOMAP-V10-debug-APK
+          path: RNAUTOMAP-V10-debug.apk
