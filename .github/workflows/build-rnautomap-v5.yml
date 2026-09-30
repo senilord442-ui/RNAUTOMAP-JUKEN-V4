@@ -1,0 +1,55 @@
+name: Build RNAUTOMAP APK v5
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Extract and build APK
+        shell: bash
+        run: |
+          set -e
+          ZIP=$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: ZIP project tidak ditemukan"
+            exit 1
+          fi
+          echo "ZIP: $ZIP"
+          rm -rf extracted
+          mkdir -p extracted
+          unzip -o "$ZIP" -d extracted
+          SETTINGS=$(find extracted -type f -name 'settings.gradle' -print -quit)
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: settings.gradle tidak ditemukan"
+            find extracted -maxdepth 5 -type f -print
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "PROJECT_DIR: $PROJECT_DIR"
+          test -f "$PROJECT_DIR/app/build.gradle"
+          gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RNAUTOMAP-debug-APK-v5
+          path: 'extracted/**/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
