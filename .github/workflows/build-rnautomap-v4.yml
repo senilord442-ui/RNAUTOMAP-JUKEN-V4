@@ -3,9 +3,6 @@ name: Build RNAUTOMAP APK v4
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip'
-      - '.github/workflows/build-rnautomap-v4.yml'
 
 jobs:
   build:
@@ -21,29 +18,51 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: Extract project
+      - name: Build APK
         shell: bash
         run: |
           set -e
-          ZIP="RNAUTOMAP-Juken-Android-AutoTune-3D-Fixed-v4.zip"
-          test -f "$ZIP"
-          rm -rf RNAUTOMAP-Juken-Android
-          unzip -q "$ZIP"
-          test -f RNAUTOMAP-Juken-Android/settings.gradle
-          test -f RNAUTOMAP-Juken-Android/app/build.gradle
 
-      - name: Build APK
-        run: |
-          gradle -p RNAUTOMAP-Juken-Android assembleDebug --no-daemon
+          echo "=== FILE DI REPOSITORY ==="
+          find . -maxdepth 2 -type f -print
+
+          ZIP=$(find . -maxdepth 2 -type f -name '*.zip' -print -quit)
+
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: ZIP TIDAK DITEMUKAN"
+            exit 1
+          fi
+
+          echo "ZIP: $ZIP"
+
+          rm -rf extracted
+          mkdir -p extracted
+
+          unzip -o "$ZIP" -d extracted
+
+          PROJECT_DIR=$(find extracted -type f -name 'settings.gradle' -print -quit | xargs dirname)
+
+          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "." ]; then
+            echo "ERROR: PROJECT TIDAK DITEMUKAN"
+            find extracted -maxdepth 5 -type f -print
+            exit 1
+          fi
+
+          echo "PROJECT: $PROJECT_DIR"
+
+          test -f "$PROJECT_DIR/app/build.gradle"
+
+          echo "=== MULAI BUILD APK ==="
+          gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RNAUTOMAP-debug-APK-v4
-          path: RNAUTOMAP-Juken-Android/app/build/outputs/apk/debug/*.apk
+          path: 'extracted/**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
