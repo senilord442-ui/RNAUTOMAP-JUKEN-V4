@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">RNAUTOMAP Juken Companion</string>
+
+    <string name="accessibility_description">
+        Membaca data live yang ditampilkan aplikasi JUKEN asli untuk membantu RNAUTOMAP menampilkan RPM, TPS dan AFR. RNAUTOMAP tidak mengambil alih koneksi Bluetooth ECU.
+    </string>
+
+</resources>
