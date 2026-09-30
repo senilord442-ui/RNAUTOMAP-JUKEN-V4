@@ -16,9 +16,7 @@ jobs:
           ZIP=$(find . -maxdepth 2 -type f -iname '*RNAUTOMAP-V10*.zip' | head -n 1)
 
           if [ -z "$ZIP" ]; then
-            echo "ZIP RNAUTOMAP V10 tidak ditemukan."
-            echo "File yang tersedia:"
-            find . -maxdepth 3 -type f | head -100
+            echo "ZIP RNAUTOMAP V10 tidak ditemukan"
             exit 1
           fi
 
@@ -30,52 +28,36 @@ jobs:
           mkdir -p v10_project
           unzip -o "$ZIP_PATH" -d v10_project
 
-          echo "Isi project:"
-          find v10_project -maxdepth 3 -type f | head -100
+          echo "Struktur project:"
+          find v10_project -maxdepth 3 -type f
 
-      - name: Cari Gradle project
-        run: |
-          GRADLEW=$(find v10_project -type f -name gradlew | head -n 1)
-
-          if [ -z "$GRADLEW" ]; then
-            echo "gradlew tidak ditemukan."
-            echo "Struktur ZIP:"
-            find v10_project -maxdepth 5 -type f
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$GRADLEW")
-          PROJECT_DIR=$(realpath "$PROJECT_DIR")
-
-          echo "Project Gradle: $PROJECT_DIR"
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
       - name: Build APK V10
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: v10_project/RNAUTOMAP-V10
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          gradle assembleDebug --stacktrace
 
       - name: Cari APK
         run: |
-          APK=$(find "$PROJECT_DIR" -type f -name '*.apk' | head -n 1)
+          APK=$(find v10_project/RNAUTOMAP-V10 -type f -name '*.apk' | head -n 1)
 
           if [ -z "$APK" ]; then
-            echo "APK tidak ditemukan."
+            echo "APK tidak ditemukan"
             exit 1
           fi
 
           echo "APK ditemukan: $APK"
-          cp "$APK" "$GITHUB_WORKSPACE/RNAUTOMAP-V10-debug.apk"
+          cp "$APK" RNAUTOMAP-V10-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
